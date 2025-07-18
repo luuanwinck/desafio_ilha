@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <title>Dinâmica de Desafios</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      margin: 0;
+      padding: 2rem;
+    }
+    #container, #resumo {
+      display: none;
+    }
+    .desafio {
+      margin-bottom: 1rem;
+    }
+    .itens {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .itens label {
+      background: #e0e0e0;
+      padding: 0.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .rodada-atual {
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+    textarea {
+      width: 100%;
+      height: 80px;
+      margin-top: 1rem;
+    }
+    .cronometro {
+      font-size: 1.2rem;
+      margin-top: 1rem;
+      color: #444;
+    }
+    #iniciarBtn {
+      padding: 1rem 2rem;
+      font-size: 1rem;
+      background-color: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #iniciarBtn:hover {
+      background-color: #004c99;
+    }
+    #resumo ul {
+      list-style-type: none;
+      padding: 0;
+    }
+    #resumo h3 {
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+    <div id="instrucoes" style="background:#e3f2fd; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
+        <h2>Instruções da Dinâmica</h2>
+        <ul>
+          <li>Serão 4 desafios, cada um com 5 minutos para planejar.</li>
+          <li>Escolha até 2 itens que julgar mais importantes para cada desafio.</li>
+          <li>Descreva a estratégia do grupo no campo indicado.</li>
+          <li>O botão <strong>Próximo Desafio</strong> só habilita se pelo menos 1 item e a estratégia estiverem preenchidos.</li>
+          <li>Ao final, será mostrado um resumo com avaliação das escolhas.</li>
+        </ul>
+      </div>
+
+  <button id="iniciarBtn">Iniciar Dinâmica</button>
+
+  <div id="container">
+    <div class="rodada-atual">Rodada <span id="numeroRodada">1</span> de 4</div>
+    <div class="desafio" id="descricaoDesafio"></div>
+
+    <div class="itens" id="itensContainer"></div>
+
+    <textarea id="estrategia" placeholder="Escreva aqui sua estratégia..."></textarea>
+    
+
+    <div class="cronometro">Tempo restante: <span id="tempo">07:00</span></div>
+  </div>
+
+  <div id="resumo">
+    <h2>Resumo das Respostas</h2>
+    <ul id="respostasFinal"></ul>
+  </div>
+
+  <button id="btnGerarPDF" style="display:none; margin-top: 20px; padding: 10px 20px;">Gerar Resumo em PDF</button>
+
+
+  <script>
+const desafios = [
+  {
+    descricao: "Uma tempestade violenta se aproxima. Ventos fortes, chuvas torrenciais e relâmpagos vão durar horas. Vocês precisam proteger o grupo e os suprimentos.",
+    itens: ["Lona impermeável", "Cordas resistentes", "Estacas de madeira", "Fita adesiva", "Cobertor térmico", "Bússola", "Machete", "Barraca", "Lanterna", "Sacos plásticos", "Kit de primeiros socorros", "Fogareiro portátil", "Mapa da ilha", "Apito", "Luva de borracha"],
+    gabarito: ["Lona impermeável", "Cordas resistentes"]
+  },
+  {
+    descricao: "Os alimentos estão acabando e não há sinais de resgate. O grupo precisa encontrar uma fonte segura de alimento sem adoecer.",
+    itens: ["Livro de plantas comestíveis", "Rede de pesca", "Canivete multifuncional", "Faca de corte", "Panela", "Filtro de água portátil", "Cordas", "Balde", "Sal", "Garrafa térmica", "Anzol e linha", "Lanterna", "Caixa de fósforos", "Frascos para coleta", "Tesoura"],
+    gabarito: ["Livro de plantas comestíveis", "Filtro de água portátil"]
+  },
+  {
+    descricao: "Um grande animal selvagem (como um javali) está rondando o acampamento à noite. Vocês precisam se proteger ou afastá-lo sem se ferirem.",
+    itens: ["Lanterna potente", "Fogos de artifício", "Apito", "Pedaços de madeira", "Corda", "Faca", "Spray de pimenta", "Armadilha improvisada", "Barricada de bambu", "Tambor metálico", "Cobertor grosso", "Silbato", "Gravador com sons de predadores", "Óleo para tochas", "Isqueiro"],
+    gabarito: ["Fogos de artifício", "Spray de pimenta"]
+  },
+  {
+    descricao: "Um avião sobrevoa a ilha, mas ele passará rapidamente. Essa pode ser a única chance de sinalizar socorro. Vocês têm poucos minutos para chamar atenção.",
+    itens: ["Espelho de sinalização", "Sinalizador", "Tocha improvisada", "Fogareiro", "Fósforo", "Papel alumínio", "Pano branco", "Tintas naturais", "Fumaça colorida", "Celular com bateria (sem sinal)", "Lanterna", "Bandeira improvisada", "Óleo vegetal", "Lente de aumento", "Papelão"],
+    gabarito: ["Espelho de sinalização", "Sinalizador"]
+  }
+];
+
+let rodadaAtual = 0;
+let tempoRestante = 7 * 60; // 5 minutos em segundos
+let intervalo;
+const respostas = [];
+
+const iniciarBtn = document.getElementById('iniciarBtn');
+const container = document.getElementById('container');
+const tempoSpan = document.getElementById('tempo');
+const numeroRodada = document.getElementById('numeroRodada');
+const descricaoDesafio = document.getElementById('descricaoDesafio');
+const itensContainer = document.getElementById('itensContainer');
+const estrategiaInput = document.getElementById('estrategia');
+const resumoDiv = document.getElementById('resumo');
+const respostasFinal = document.getElementById('respostasFinal');
+
+let botaoProximo;
+
+function salvarNoStorage() {
+  localStorage.setItem('respostasDinâmica', JSON.stringify(respostas));
+  localStorage.setItem('rodadaAtualDinâmica', rodadaAtual);
+}
+
+function carregarDoStorage() {
+  const dados = localStorage.getItem('respostasDinâmica');
+  const rodada = localStorage.getItem('rodadaAtualDinâmica');
+  if(dados && rodada !== null) {
+    const carregado = confirm("Deseja continuar a dinâmica anterior?");
+    if(carregado){
+      respostas.push(...JSON.parse(dados));
+      rodadaAtual = parseInt(rodada);
+      return true;
+    } else {
+      localStorage.clear();
+    }
+  }
+  return false;
+}
+
+function criarBotaoProximo() {
+  botaoProximo = document.createElement('button');
+  botaoProximo.textContent = "Próximo Desafio";
+  botaoProximo.disabled = true;
+  botaoProximo.style.marginTop = "10px";
+  container.appendChild(botaoProximo);
+
+  botaoProximo.addEventListener('click', () => {
+    if(!validarResposta()) return;
+    salvarRespostas();
+    rodadaAtual++;
+    salvarNoStorage();
+    if (rodadaAtual < desafios.length) {
+      iniciarRodada();
+    } else {
+      mostrarResumo();
+    }
+  });
+}
+
+function validarResposta() {
+  const selecionados = document.querySelectorAll('input[name="item"]:checked');
+  if(selecionados.length === 0){
+    alert("Selecione pelo menos 1 item.");
+    return false;
+  }
+  if(estrategiaInput.value.trim() === ""){
+    alert("Escreva sua estratégia.");
+    return false;
+  }
+  return true;
+}
+
+iniciarBtn.addEventListener('click', () => {
+  iniciarBtn.style.display = 'none';
+  container.style.display = 'block';
+  if(!botaoProximo) criarBotaoProximo();
+  iniciarRodada();
+});
+
+function iniciarRodada() {
+  tempoRestante = 7 * 60;
+  atualizarTempo();
+  numeroRodada.textContent = rodadaAtual + 1;
+  const desafio = desafios[rodadaAtual];
+  descricaoDesafio.textContent = desafio.descricao;
+  estrategiaInput.value = "";
+
+  itensContainer.innerHTML = "";
+  desafio.itens.forEach((item, i) => {
+    const id = `item-${rodadaAtual}-${i}`;
+    const label = document.createElement("label");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.id = id;
+    checkbox.name = "item";
+    checkbox.value = item;
+    checkbox.addEventListener('change', limitarSelecao);
+    label.appendChild(checkbox);
+    label.appendChild(document.createTextNode(" " + item));
+    itensContainer.appendChild(label);
+  });
+
+  botaoProximo.disabled = true;
+  estrategiaInput.addEventListener('input', verificarHabilitarProximo);
+  document.querySelectorAll('input[name="item"]').forEach(input => input.addEventListener('change', verificarHabilitarProximo));
+
+  clearInterval(intervalo);
+  intervalo = setInterval(() => {
+    tempoRestante--;
+    atualizarTempo();
+
+    if (tempoRestante <= 0) {
+      clearInterval(intervalo);
+      botaoProximo.disabled = false;
+      alert("Tempo da rodada acabou. Clique em 'Próximo Desafio' para continuar.");
+    }
+  }, 1000);
+}
+
+function verificarHabilitarProximo() {
+  const selecionados = document.querySelectorAll('input[name="item"]:checked');
+  const textoPreenchido = estrategiaInput.value.trim().length > 0;
+  botaoProximo.disabled = !(selecionados.length > 0 && textoPreenchido);
+  if(selecionados.length > 2){
+    alert("Você só pode escolher 2 itens!");
+    this.checked = false;
+    botaoProximo.disabled = true;
+  }
+}
+
+function limitarSelecao(e) {
+  const selecionados = document.querySelectorAll('input[name="item"]:checked');
+  if (selecionados.length > 2) {
+    e.target.checked = false;
+    alert("Você só pode escolher 2 itens!");
+  }
+}
+
+function atualizarTempo() {
+  const minutos = Math.floor(tempoRestante / 60);
+  const segundos = tempoRestante % 60;
+  tempoSpan.textContent = `${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
+}
+
+function salvarRespostas() {
+  const selecionados = Array.from(document.querySelectorAll('input[name="item"]:checked')).map(cb => cb.value);
+  const estrategia = estrategiaInput.value.trim();
+  respostas.push({
+    rodada: rodadaAtual + 1,
+    desafio: desafios[rodadaAtual].descricao,
+    itens: selecionados,
+    estrategia: estrategia,
+    gabarito: desafios[rodadaAtual].gabarito
+  });
+}
+
+function mostrarResumo() {
+  container.style.display = "none";
+  resumoDiv.style.display = "block";
+
+  respostasFinal.innerHTML = "";
+
+  respostas.forEach((resposta, i) => {
+    const li = document.createElement("li");
+    let acertos = resposta.itens.filter(item => resposta.gabarito.includes(item)).length;
+    let avaliacao = '';
+    if(acertos === 2){
+      avaliacao = '<span style="color:green;">Excelente escolha!</span>';
+    } else if (acertos === 1) {
+      avaliacao = '<span style="color:orange;">Boa escolha, mas pode melhorar.</span>';
+    } else {
+      avaliacao = '<span style="color:red;">Itens pouco eficazes para este desafio.</span>';
+    }
+    li.innerHTML = `<strong>Rodada ${resposta.rodada}</strong><br>
+      <em>${resposta.desafio}</em><br>
+      <strong>Itens escolhidos:</strong> ${resposta.itens.join(', ')}<br>
+      <strong>Estratégia:</strong> ${resposta.estrategia}<br>
+      <strong>Avaliação:</strong> ${avaliacao}<br><br>`;
+    respostasFinal.appendChild(li);
+  });
+
+  // Apaga dados do localStorage para nova dinâmica
+  localStorage.removeItem('respostasDinâmica');
+  localStorage.removeItem('rodadaAtualDinâmica');
+}
+
+// Carregar respostas anteriores se houver
+window.onload = () => {
+  if(carregarDoStorage()){
+    iniciarBtn.style.display = 'none';
+    container.style.display = 'block';
+    if(!botaoProximo) criarBotaoProximo();
+    iniciarRodada();
+  }
+}
+
+
+  </script>
+
+</body>
+</html>
