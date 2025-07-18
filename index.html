@@ -124,7 +124,7 @@ const desafios = [
 ];
 
 let rodadaAtual = 0;
-let tempoRestante = 1 * 5; // 5 minutos em segundos
+let tempoRestante = 6 * 60; // 5 minutos em segundos
 let intervalo;
 const respostas = [];
 
@@ -202,7 +202,7 @@ iniciarBtn.addEventListener('click', () => {
 });
 
 function iniciarRodada() {
-  tempoRestante = 1 * 5;
+  tempoRestante = 6 * 60;
   atualizarTempo();
   numeroRodada.textContent = rodadaAtual + 1;
   const desafio = desafios[rodadaAtual];
