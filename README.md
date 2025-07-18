@@ -30,4 +30,22 @@ Para publicar este projeto online gratuitamente, siga os passos:
    - Escolha a pasta raiz (`/root`).
    - Salve.
 6. Após alguns minutos, o GitHub disponibilizará uma URL para acessar seu projeto, geralmente:
-   
+
+
+
+7. Compartilhe este link com seus alunos para acesso à dinâmica online.
+
+## Tecnologias usadas
+
+- HTML5
+- CSS3
+- JavaScript ES6
+
+## Contato
+
+Para dúvidas ou melhorias, abra uma issue ou entre em contato.
+
+---
+
+*Projeto criado para fins educacionais e dinâmicas em grupo.*
+
