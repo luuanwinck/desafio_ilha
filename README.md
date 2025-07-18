@@ -31,7 +31,7 @@ Para publicar este projeto online gratuitamente, siga os passos:
    - Salve.
 6. Após alguns minutos, o GitHub disponibilizará uma URL para acessar seu projeto, geralmente:
 
-
+https://luuanwinck.github.io/desafio_ilha/
 
 7. Compartilhe este link com seus alunos para acesso à dinâmica online.
 
